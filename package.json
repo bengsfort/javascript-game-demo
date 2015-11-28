@@ -1,0 +1,44 @@
+{
+  "name": "js-dungeon-crawler",
+  "version": "0.0.1",
+  "description": "A demo javascript dungeon crawling game.",
+  "main": "src/game.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Matt Bengston <dorifutomatt@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "event-stream": "^3.3.2",
+    "gulp": "^3.9.0",
+    "gulp-auto-task": "0.0.1",
+    "gulp-autoprefixer": "^3.1.0",
+    "gulp-minify-css": "^1.2.1",
+    "gulp-rename": "^1.2.2",
+    "gulp-sass": "^2.1.0",
+    "gulp-util": "^3.0.7",
+    "vinyl-source-stream": "^1.1.0"
+  },
+  "dependencies": {
+    "browser-sync": "^2.10.0",
+    "browserify": "^12.0.1"
+  },
+  "paths": {
+    "tasks": "gulp-tasks/",
+    "build": "build/",
+    "src": "src/",
+    "css": {
+      "src": "src/styles/",
+      "dest": "build/css/"
+    },
+    "js": {
+      "entries": [
+        {
+          "name": "game",
+          "path": "src/game.js",
+          "dest": "build/"
+        }
+      ]
+    }
+  }
+}
