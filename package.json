@@ -17,6 +17,7 @@
     "gulp-rename": "^1.2.2",
     "gulp-sass": "^2.1.0",
     "gulp-util": "^3.0.7",
+    "require-dir": "^0.3.0",
     "vinyl-source-stream": "^1.1.0"
   },
   "dependencies": {
