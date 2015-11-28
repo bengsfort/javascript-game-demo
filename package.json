@@ -26,18 +26,18 @@
   },
   "paths": {
     "tasks": "gulp-tasks/",
-    "build": "build/",
+    "build": "src/",
     "src": "src/",
     "css": {
       "src": "src/styles/",
-      "dest": "build/css/"
+      "dest": "src/"
     },
     "js": {
       "entries": [
         {
           "name": "game",
-          "path": "src/game.js",
-          "dest": "build/"
+          "path": "src/js/game.js",
+          "dest": "src/"
         }
       ]
     }
