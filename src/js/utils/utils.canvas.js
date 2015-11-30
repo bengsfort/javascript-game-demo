@@ -1,6 +1,6 @@
 module.exports = {
     /** Determine the proper pixel ratio for the canvas */
-    getPixelRatio : function getPixelRatio(canvas) {
+    getPixelRatio : function getPixelRatio(context) {
       console.log('Determining pixel ratio.');
       var backingStores = [
         'webkitBackingStorePixelRatio',
@@ -14,9 +14,7 @@ module.exports = {
 
       // Iterate through our backing store props and determine the proper backing ratio.
       var backingRatio = backingStores.reduce(function(prev, curr) {
-        return (prev !== 1 && canvas.hasOwnProperty(curr) 
-                ? canvas[curr]
-                : 1);
+        return (context.hasOwnProperty(curr) ? context[curr] : 1);
       });
 
       // Return the proper pixel ratio by dividing the device ratio by the backing ratio
