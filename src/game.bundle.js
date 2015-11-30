@@ -76,7 +76,7 @@ function gameLoop ( scope ) {
             }
 
             // Update the game state
-            scope.update( now );
+            scope.state = scope.update( now );
             // Render the next frame
             scope.render();
         }
@@ -140,8 +140,15 @@ function gameUpdate ( scope ) {
     return function update( tFrame ) {
         var state = scope.state || {};
 
-        // Mutate the state var, then update the games state
-        scope.state = state;
+        // If there are entities, iterate through them and call their `update` methods
+        if (state.hasOwnProperty('entities')) {
+            var entities = state.entities;
+            // Loop through entities
+            for (var entity in entities) {
+                // Fire off each active entities `render` method
+                entities[entity].update();
+            }
+        }
 
         return state;
     }   
@@ -153,11 +160,15 @@ module.exports = gameUpdate;
 var gameLoop = require('./core/game.loop.js'),
     gameUpdate = require('./core/game.update.js'),
     gameRender = require('./core/game.render.js'),
+    // Entities
+    playerEnt = require('./players/player.js'),
     // Utilities
     cUtils = require('./utils/utils.canvas.js'), // require our canvas utils
     $container = document.getElementById('container');
 
 function Game(w, h, targetFps, showFps) {
+    var that;
+
     // Setup some constants
     this.constants = {
         width: w,
@@ -165,6 +176,9 @@ function Game(w, h, targetFps, showFps) {
         targetFps: targetFps,
         showFps: showFps
     };
+
+    // Instantiate an empty state object
+    this.state = {};
 
   // Generate a canvas and store it as our viewport
     this.viewport = cUtils.generateCanvas(w, h);
@@ -181,7 +195,12 @@ function Game(w, h, targetFps, showFps) {
     this.render = gameRender( this );
     this.loop = gameLoop( this );
 
-    console.log(this);
+    that = this;
+
+    var createPlayer = function createPlayer() {
+        that.state.entities = that.state.entities || {};
+        that.state.entities.player = new playerEnt(that, (w / 2), (h - 100));
+    }();
 
     return this;
 }
@@ -190,7 +209,69 @@ function Game(w, h, targetFps, showFps) {
 window.game = new Game(800, 600, 60, true);
 
 module.exports = game;
-},{"./core/game.loop.js":1,"./core/game.render.js":2,"./core/game.update.js":3,"./utils/utils.canvas.js":5}],5:[function(require,module,exports){
+},{"./core/game.loop.js":1,"./core/game.render.js":2,"./core/game.update.js":3,"./players/player.js":5,"./utils/utils.canvas.js":6}],5:[function(require,module,exports){
+var keys = require('../utils/utils.keysDown.js'),
+    mathHelpers = require('../utils/utils.math.js');
+
+/** Player Module
+ * Main player entity module.
+ */
+function Player(scope, x, y) {
+    var player = this;
+
+    // Create the initial state
+    player.state = {
+        position: {
+            x: x,
+            y: y
+        },
+        moveSpeed: 1.5
+    };
+
+    // Set up any other constants
+    var height = 23,
+        width = 16;
+
+    // Draw the player on the canvas
+    player.render = function playerRender() {
+        scope.context.fillStyle = '#40d870';
+        scope.context.fillRect(
+            player.state.position.x,
+            player.state.position.y,
+            width, height
+        );
+    };
+
+    // Fired via the global update method.
+    // Mutates state as needed for proper rendering next state
+    player.update = function playerUpdate() {
+        // Check if keys are pressed, if so, update the players position.
+        if (keys.isPressed.left) {
+            player.state.position.x -= player.state.moveSpeed;
+        }
+
+        if (keys.isPressed.right) {
+            player.state.position.x += player.state.moveSpeed;
+        }
+
+        if (keys.isPressed.up) {
+            player.state.position.y -= player.state.moveSpeed;
+        }
+
+        if (keys.isPressed.down) {
+            player.state.position.y += player.state.moveSpeed;
+        }
+
+        // Bind the player to the boundary
+        player.state.position.x = player.state.position.x.boundary(0, (scope.constants.width - width));
+        player.state.position.y = player.state.position.y.boundary(0, (scope.constants.height - height));
+    };
+
+    return player;
+}
+
+module.exports = Player;
+},{"../utils/utils.keysDown.js":7,"../utils/utils.math.js":8}],6:[function(require,module,exports){
 module.exports = {
     /** Determine the proper pixel ratio for the canvas */
     getPixelRatio : function getPixelRatio(context) {
@@ -236,4 +317,79 @@ module.exports = {
       return canvas;
     }
 };
+},{}],7:[function(require,module,exports){
+/** keysDown Utility Module
+ * Monitors and determines whether a key 
+ * is pressed down at any given moment.
+ * Returns getters for each key.
+ */
+function keysDown() {
+    this.isPressed = {};
+
+    var left, right, up, down;
+
+    // Set up `onkeydown` event handler.
+    document.onkeydown = function (ev) {
+        if (ev.keyCode === 39) { right = true; }
+        if (ev.keyCode === 37) { left = true; }
+        if (ev.keyCode === 38) { up = true; }
+        if (ev.keyCode === 40) { down = true; }
+    };
+
+    // Set up `onkeyup` event handler.
+    document.onkeyup = function (ev) {
+        if (ev.keyCode === 39) { right = false; }
+        if (ev.keyCode === 37) { left = false; }
+        if (ev.keyCode === 38) { up = false; }
+        if (ev.keyCode === 40) { down = false; }
+    };
+
+    // Define getters for each key
+    // * Not strictly necessary. Could just return
+    // * an object literal of methods, the syntactic
+    // * sugar of `defineProperty` is just so much sweeter :)
+    Object.defineProperty(this.isPressed, 'left', {
+        get: function() { return left; },
+        configurable: true,
+        enumerable: true
+    });
+
+    Object.defineProperty(this.isPressed, 'right', {
+        get: function() { return right; },
+        configurable: true,
+        enumerable: true
+    });
+
+    Object.defineProperty(this.isPressed, 'up', {
+        get: function() { return up; },
+        configurable: true,
+        enumerable: true
+    });
+
+    Object.defineProperty(this.isPressed, 'down', {
+        get: function() { return down; },
+        configurable: true,
+        enumerable: true
+    });
+
+    return this;
+}
+
+module.exports = keysDown();
+},{}],8:[function(require,module,exports){
+/** 
+ * Number.prototype.boundary
+ * Binds a number between a minimum and a maximum amount.
+ * var x = 12 * 3;
+ * var y = x.boundary(3, 23);
+ * y === 23
+ */
+
+var Boundary = function numberBoundary(min, max) {
+    return Math.min( Math.max(this, min), max );
+};
+
+// Expose methods
+Number.prototype.boundary = Boundary;
+module.exports = Boundary;
 },{}]},{},[4]);

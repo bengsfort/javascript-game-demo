@@ -75,7 +75,7 @@ function gameLoop ( scope ) {
             }
 
             // Update the game state
-            scope.update( now );
+            scope.state = scope.update( now );
             // Render the next frame
             scope.render();
         }

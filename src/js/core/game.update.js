@@ -7,8 +7,15 @@ function gameUpdate ( scope ) {
     return function update( tFrame ) {
         var state = scope.state || {};
 
-        // Mutate the state var, then update the games state
-        scope.state = state;
+        // If there are entities, iterate through them and call their `update` methods
+        if (state.hasOwnProperty('entities')) {
+            var entities = state.entities;
+            // Loop through entities
+            for (var entity in entities) {
+                // Fire off each active entities `render` method
+                entities[entity].update();
+            }
+        }
 
         return state;
     }   
