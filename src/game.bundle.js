@@ -1,4 +1,95 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/**
+ * Core Entities module
+ * Contains the base Entity class.
+ */
+var keys = require('../utils/utils.keysDown.js'),
+	extend = require('../utils/utils.extend.js'),
+	Sprite = require('./game.sprites.js');
+
+function Entity(scope, coords, opts, sprites) {
+	var entity = {};
+
+	// Initialize state
+	entity.state = {
+		position: {
+			x: coords.x,
+			y: coords.y
+		},
+		gravity: opts.gravity || 1,
+		groundSpeed: opts.groundSpeed || 1,
+		airSpeed: opts.airSpeed || 0.25,
+		action: false,
+		direction: opts.startDirection || 'right',
+		isGrounded: true
+	};
+
+	entity.constants = {
+		gravityForce: 7
+	};
+
+	entity.updateDirection = function entityUpdateDirection(direction) {
+		entity.state.direction = direction;
+	};
+
+	entity.updateSprite = function entityUpdateSprite(action, direction) {
+		// Is direction even needed?
+		entity.updateDirection(direction);
+		
+		if (action !== entity.state.action) {
+			entity.state.action = action;
+			entity.state.sprite = entity.sprites[action][direction];
+		}
+	};
+
+	entity.update = function entityUpdate() {
+		if (opts.hasOwnProperty('update')) {
+			opts.update.call(entity, scope);
+		}
+		entity.applyGravity();
+		entity.state.sprite.update();
+	};
+
+	entity.render = function entityRender() {
+		if (opts.hasOwnProperty('render')) {
+			opts.render.call(entity, scope);
+		}
+		entity.state.sprite.render(entity.state.position.x, entity.state.position.y);
+	};
+
+	entity.applyGravity = function entityApplyGravity() {
+		entity.state.position.y += entity.state.gravity * entity.constants.gravityForce;
+	};
+
+	var fps = scope.constants.targetFps,
+			ctx = scope.context;
+
+	// Initialize sprites
+	entity.sprites = {};
+
+	for (var action in sprites) {
+		entity.sprites[action] = {};
+		for (var direction in sprites[action].images) {
+			entity.sprites[action][direction] = new Sprite(extend({
+				fps: fps,
+				context: ctx,
+				image: sprites[action].images[direction]
+			}, sprites[action]));
+			
+			// If this is the default sprite, store it in the state
+			if (entity.sprites[action][direction].hasOwnProperty('default')) {
+				if (entity.sprites[action][direction].default !== false && direction === entity.state.direction) {
+					entity.state.sprite = entity.sprites[action][direction];
+				}
+			}
+		} // end direction loop
+	} // end action loop
+
+	return entity;
+}
+
+module.exports = Entity;
+},{"../utils/utils.extend.js":9,"../utils/utils.keysDown.js":10,"./game.sprites.js":4}],2:[function(require,module,exports){
 /** Game Loop Module
  * This module contains the game loop, which handles
  * updating the game state and re-rendering the canvas
@@ -89,7 +180,7 @@ function gameLoop ( scope ) {
 }
 
 module.exports = gameLoop;
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /** Game Render Module
  * Called by the game loop, this module will
  * perform use the global state to re-render
@@ -130,7 +221,58 @@ function gameRender( scope ) {
 }
 
 module.exports = gameRender;
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
+/**
+ * Core sprites module
+ */
+function Sprite(options) {
+	var sprite = {},
+		duration = options.duration || 1,
+		fps = options.fps || 60,
+		loop = options.hasOwnProperty('loop') ? options.loop : true,
+		frame = 0,
+		tick = 0,
+		ticksPerFrame = ticksPerFrame || fps * duration,
+		framesCount = options.framesCount || 1;
+
+	var spriteImg = new Image();
+	spriteImg.src = options.image;
+
+	sprite.image = spriteImg;
+	sprite.width = options.width;
+	sprite.height = options.height;
+	sprite.ctx = options.context;
+	sprite.frameWidth = sprite.width / framesCount;
+
+	sprite.render = function spriteRender(x, y) {
+		this.ctx.drawImage(
+			this.image,
+			frame * this.width / framesCount, 0, // source x, source y
+			this.frameWidth, this.height, // source w, source h
+			x || 0, y || 0, // destination x, y on the canvas
+			this.frameWidth, this.height // destination w, destination h
+		);
+	};
+
+	sprite.update = function spriteUpdate() {
+		tick += 1;
+		if (tick > ticksPerFrame) {
+			tick = 0;
+			if (frame < framesCount - 1) {
+				frame += 1;
+			} else {
+				if (loop) {
+					frame = 0;
+				}
+			}
+		}
+	};
+
+	return sprite;
+}
+
+module.exports = Sprite;
+},{}],5:[function(require,module,exports){
 /** Game Update Module
  * Called by the game loop, this module will
  * perform any state calculations / updates
@@ -155,7 +297,7 @@ function gameUpdate ( scope ) {
 }
 
 module.exports = gameUpdate;
-},{}],4:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
     // Modules
 var gameLoop = require('./core/game.loop.js'),
     gameUpdate = require('./core/game.update.js'),
@@ -199,7 +341,7 @@ function Game(w, h, targetFps, showFps) {
 
     var createPlayer = function createPlayer() {
         that.state.entities = that.state.entities || {};
-        that.state.entities.player = new playerEnt(that, (w / 2), (h - 100));
+        that.state.entities.player = new playerEnt(that, 128, (h - 160));
     }();
 
     return this;
@@ -209,69 +351,130 @@ function Game(w, h, targetFps, showFps) {
 window.game = new Game(800, 600, 60, true);
 
 module.exports = game;
-},{"./core/game.loop.js":1,"./core/game.render.js":2,"./core/game.update.js":3,"./players/player.js":5,"./utils/utils.canvas.js":6}],5:[function(require,module,exports){
-var keys = require('../utils/utils.keysDown.js'),
-    mathHelpers = require('../utils/utils.math.js');
+},{"./core/game.loop.js":2,"./core/game.render.js":3,"./core/game.update.js":5,"./players/player.js":7,"./utils/utils.canvas.js":8}],7:[function(require,module,exports){
+var Entity = require('../core/game.entities.js'),
+    keys = require('../utils/utils.keysDown.js'),
+    boundary = require('../utils/utils.math.js');
 
-/** Player Module
- * Main player entity module.
+/**
+ * Player module
+ * The Players character entity.
+ * @extends core#Entity
  */
 function Player(scope, x, y) {
-    var player = this;
-
-    // Create the initial state
-    player.state = {
-        position: {
+    var player = new Entity(scope, {
             x: x,
             y: y
-        },
-        moveSpeed: 1.5
+        }, {
+            gravity: 1,
+            groundSpeed: 3.5,
+            airSpeed: 1.25,
+            startDirection: 'right',
+            update: function playerUpdate() {
+                this.handleInputs();
+                // Check if keys are pressed, if so, update the players position.
+                if (keys.isPressed.left && !keys.isPressed.down) {
+                    if (this.state.isGrounded) {
+                        this.state.position.x -= this.state.groundSpeed;
+                        this.updateSprite('run', 'left');
+                    } else {
+                        this.state.position.x -= this.state.airSpeed;
+                    }
+                }
+
+                if (keys.isPressed.right && !keys.isPressed.down) {
+                    if (this.state.isGrounded) {
+                        this.state.position.x += this.state.groundSpeed;
+                        this.updateSprite('run', 'right');
+                    } else {
+                        this.state.position.x += this.state.airSpeed;
+                    }
+                }
+                
+                if (keys.isPressed.down) {
+                    this.updateSprite('crouch', this.state.direction);
+                }
+                
+                if (keys.isPressed.up) {
+                    this.updateSprite('jump', this.state.direction);
+                    this.state.position.y -= 7 * 3;
+                }
+
+                if ((!keys.isPressed.left && !keys.isPressed.right && !keys.isPressed.down && !keys.isPressed.up)) {
+                    this.updateSprite('idle', this.state.direction);
+                }
+
+                // Bind the player to the boundary
+                this.state.position.x = this.state.position.x.boundary(0, (scope.constants.width - this.state.sprite.frameWidth));
+                this.state.position.y = this.state.position.y.boundary(0, (scope.constants.height - (this.state.sprite.height + 10)));
+                // Not sure why the height is off by 10.....
+            }
+        }, {
+            'idle': {
+                duration: 0.4,
+                framesCount: 2,
+                images: {
+                    left: '/assets/sprites/entities/mmx-idle-left.png',
+                    right: '/assets/sprites/entities/mmx-idle-right.png'
+                },
+                width: 256,
+                height: 140,
+                default: true
+            },
+            'run': {
+                duration: 0.1,
+                framesCount: 6,
+                images: {
+                    left: '/assets/sprites/entities/mmx-run-left.png',
+                    right: '/assets/sprites/entities/mmx-run-right.png'
+                },
+                width: 852,
+                height: 142
+            },
+            'crouch': {
+                duration: 0.1,
+                framesCount: 2,
+                images: {
+                    left: '/assets/sprites/entities/mmx-crouch-left.png',
+                    right: '/assets/sprites/entities/mmx-crouch-right.png'
+                },
+                loop: false,
+                width: 256,
+                height: 140
+            },
+            'jump': {
+                duration: 0.1,
+                framesCount: 1,
+                images: {
+                    left: '/assets/sprites/entities/mmx-jump-left.png',
+                    right: '/assets/sprites/entities/mmx-jump-right.png'
+                },
+                loop: false,
+                width: 74,
+                height: 184
+            },
+            'fall': {
+                duration: 0.1,
+                framesCount: 1,
+                images: {
+                    left: '/assets/sprites/entities/mmx-fall-left.png',
+                    right: '/assets/sprites/entities/mmx-fall-right.png'
+                },
+                loop: false,
+                width: 108,
+                height: 168
+            }
+        });
+    
+    player.handleInputs = function playerHandleInputs() {
+        
     };
-
-    // Set up any other constants
-    var height = 23,
-        width = 16;
-
-    // Draw the player on the canvas
-    player.render = function playerRender() {
-        scope.context.fillStyle = '#40d870';
-        scope.context.fillRect(
-            player.state.position.x,
-            player.state.position.y,
-            width, height
-        );
-    };
-
-    // Fired via the global update method.
-    // Mutates state as needed for proper rendering next state
-    player.update = function playerUpdate() {
-        // Check if keys are pressed, if so, update the players position.
-        if (keys.isPressed.left) {
-            player.state.position.x -= player.state.moveSpeed;
-        }
-
-        if (keys.isPressed.right) {
-            player.state.position.x += player.state.moveSpeed;
-        }
-
-        if (keys.isPressed.up) {
-            player.state.position.y -= player.state.moveSpeed;
-        }
-
-        if (keys.isPressed.down) {
-            player.state.position.y += player.state.moveSpeed;
-        }
-
-        // Bind the player to the boundary
-        player.state.position.x = player.state.position.x.boundary(0, (scope.constants.width - width));
-        player.state.position.y = player.state.position.y.boundary(0, (scope.constants.height - height));
-    };
-
+    
     return player;
 }
 
 module.exports = Player;
-},{"../utils/utils.keysDown.js":7,"../utils/utils.math.js":8}],6:[function(require,module,exports){
+},{"../core/game.entities.js":1,"../utils/utils.keysDown.js":10,"../utils/utils.math.js":11}],8:[function(require,module,exports){
 module.exports = {
     /** Determine the proper pixel ratio for the canvas */
     getPixelRatio : function getPixelRatio(context) {
@@ -317,7 +520,32 @@ module.exports = {
       return canvas;
     }
 };
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
+/**
+ * Native JS extend utility
+ * via @ChrisFerdinandi
+ */
+function utilsExtendObj() {
+	var result = {},
+		length = arguments.length;
+
+	var mergeObject = function (obj) {
+		for (var prop in obj) {
+			if (Object.prototype.hasOwnProperty.call(obj, prop)) {
+				result[prop] = obj[prop];
+			}
+		}
+	};
+
+	for (var i = 0; i < length; i++) {
+		mergeObject(arguments[i]);
+	}
+
+	return result;
+}
+
+module.exports = utilsExtendObj;
+},{}],10:[function(require,module,exports){
 /** keysDown Utility Module
  * Monitors and determines whether a key 
  * is pressed down at any given moment.
@@ -376,7 +604,7 @@ function keysDown() {
 }
 
 module.exports = keysDown();
-},{}],8:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 /** 
  * Number.prototype.boundary
  * Binds a number between a minimum and a maximum amount.
@@ -385,11 +613,13 @@ module.exports = keysDown();
  * y === 23
  */
 
-var Boundary = function numberBoundary(min, max) {
-    return Math.min( Math.max(this, min), max );
+var Boundary = function numberBoundary(min, max, num) {
+    return typeof num !== "undefined"
+    	? Math.min( Math.max(num, min), max )
+    	: Math.min( Math.max(this, min), max );
 };
 
 // Expose methods
 Number.prototype.boundary = Boundary;
 module.exports = Boundary;
-},{}]},{},[4]);
+},{}]},{},[6]);

@@ -6,8 +6,10 @@
  * y === 23
  */
 
-var Boundary = function numberBoundary(min, max) {
-    return Math.min( Math.max(this, min), max );
+var Boundary = function numberBoundary(min, max, num) {
+    return typeof num !== "undefined"
+    	? Math.min( Math.max(num, min), max )
+    	: Math.min( Math.max(this, min), max );
 };
 
 // Expose methods

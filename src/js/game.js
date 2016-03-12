@@ -41,7 +41,7 @@ function Game(w, h, targetFps, showFps) {
 
     var createPlayer = function createPlayer() {
         that.state.entities = that.state.entities || {};
-        that.state.entities.player = new playerEnt(that, (w / 2), (h - 100));
+        that.state.entities.player = new playerEnt(that, 128, (h - 160));
     }();
 
     return this;
