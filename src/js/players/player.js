@@ -21,19 +21,19 @@ function Player(scope, x, y) {
                 // Check if keys are pressed, if so, update the players position.
                 if (keys.isPressed.left && !keys.isPressed.down) {
                     if (this.state.isGrounded) {
-                        this.state.position.x -= this.state.groundSpeed;
+                        this.state.position.x -= this.attributes.groundSpeed;
                         this.updateSprite('run', 'left');
                     } else {
-                        this.state.position.x -= this.state.airSpeed;
+                        this.state.position.x -= this.attributes.airSpeed;
                     }
                 }
 
                 if (keys.isPressed.right && !keys.isPressed.down) {
                     if (this.state.isGrounded) {
-                        this.state.position.x += this.state.groundSpeed;
+                        this.state.position.x += this.attributes.groundSpeed;
                         this.updateSprite('run', 'right');
                     } else {
-                        this.state.position.x += this.state.airSpeed;
+                        this.state.position.x += this.attributes.airSpeed;
                     }
                 }
                 

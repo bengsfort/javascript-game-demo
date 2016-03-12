@@ -15,13 +15,19 @@ function Entity(scope, coords, opts, sprites) {
 			x: coords.x,
 			y: coords.y
 		},
-		gravity: opts.gravity || 1,
-		groundSpeed: opts.groundSpeed || 1,
-		airSpeed: opts.airSpeed || 0.25,
 		action: false,
 		direction: opts.startDirection || 'right',
 		isGrounded: true
 	};
+
+	entity.baseAttributes = {
+		gravity: opts.gravity || 1,
+		groundSpeed: opts.groundSpeed || 1,
+		airSpeed: opts.airSpeed || 0.25
+	};
+	// attributes will be used as the _active_ stats.
+	// ie: buffed / nerfed stats due to a power up
+	entity.attributes = extend({}, entity.baseAttributes);
 
 	entity.constants = {
 		gravityForce: 7
@@ -57,7 +63,7 @@ function Entity(scope, coords, opts, sprites) {
 	};
 
 	entity.applyGravity = function entityApplyGravity() {
-		entity.state.position.y += entity.state.gravity * entity.constants.gravityForce;
+		entity.state.position.y += entity.attributes.gravity * entity.constants.gravityForce;
 	};
 
 	var fps = scope.constants.targetFps,

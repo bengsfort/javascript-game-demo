@@ -16,13 +16,19 @@ function Entity(scope, coords, opts, sprites) {
 			x: coords.x,
 			y: coords.y
 		},
-		gravity: opts.gravity || 1,
-		groundSpeed: opts.groundSpeed || 1,
-		airSpeed: opts.airSpeed || 0.25,
 		action: false,
 		direction: opts.startDirection || 'right',
 		isGrounded: true
 	};
+
+	entity.baseAttributes = {
+		gravity: opts.gravity || 1,
+		groundSpeed: opts.groundSpeed || 1,
+		airSpeed: opts.airSpeed || 0.25
+	};
+	// attributes will be used as the _active_ stats.
+	// ie: buffed / nerfed stats due to a power up
+	entity.attributes = extend({}, entity.baseAttributes);
 
 	entity.constants = {
 		gravityForce: 7
@@ -58,7 +64,7 @@ function Entity(scope, coords, opts, sprites) {
 	};
 
 	entity.applyGravity = function entityApplyGravity() {
-		entity.state.position.y += entity.state.gravity * entity.constants.gravityForce;
+		entity.state.position.y += entity.attributes.gravity * entity.constants.gravityForce;
 	};
 
 	var fps = scope.constants.targetFps,
@@ -375,19 +381,19 @@ function Player(scope, x, y) {
                 // Check if keys are pressed, if so, update the players position.
                 if (keys.isPressed.left && !keys.isPressed.down) {
                     if (this.state.isGrounded) {
-                        this.state.position.x -= this.state.groundSpeed;
+                        this.state.position.x -= this.attributes.groundSpeed;
                         this.updateSprite('run', 'left');
                     } else {
-                        this.state.position.x -= this.state.airSpeed;
+                        this.state.position.x -= this.attributes.airSpeed;
                     }
                 }
 
                 if (keys.isPressed.right && !keys.isPressed.down) {
                     if (this.state.isGrounded) {
-                        this.state.position.x += this.state.groundSpeed;
+                        this.state.position.x += this.attributes.groundSpeed;
                         this.updateSprite('run', 'right');
                     } else {
-                        this.state.position.x += this.state.airSpeed;
+                        this.state.position.x += this.attributes.airSpeed;
                     }
                 }
                 
