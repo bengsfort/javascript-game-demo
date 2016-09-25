@@ -19,7 +19,8 @@ function Entity(scope, coords, opts, sprites) {
 		direction: opts.startDirection || 'right',
 		isGrounded: true
 	};
-
+	
+	entity.updateQueue = {};
 	entity.baseAttributes = {
 		gravity: opts.gravity || 1,
 		groundSpeed: opts.groundSpeed || 1,
@@ -51,7 +52,11 @@ function Entity(scope, coords, opts, sprites) {
 		if (opts.hasOwnProperty('update')) {
 			opts.update.call(entity, scope);
 		}
+
 		entity.applyGravity();
+		this.state.position.x = this.state.position.x.boundary(0, (scope.constants.width - this.state.sprite.frameWidth));
+		this.state.position.y = this.state.position.y.boundary(0, (scope.constants.height - (this.state.sprite.height + 10)));
+		entity.calculateUpdates();
 		entity.state.sprite.update();
 	};
 
@@ -63,7 +68,17 @@ function Entity(scope, coords, opts, sprites) {
 	};
 
 	entity.applyGravity = function entityApplyGravity() {
-		entity.state.position.y += entity.attributes.gravity * entity.constants.gravityForce;
+		var gravitationalConstant = entity.constants.gravityForce,
+			entityMass = entity.attributes.gravity * 0.5,
+			floorMass = 400,
+			distance = entity.state.position.y - (scope.constants.height + 200),
+			gravitationalPull = gravitationalConstant * (entityMass * floorMass / Math.pow(distance, 2)) * 1500;
+		console.log('gravitational pull', gravitationalPull);
+		entity.state.position.y += gravitationalPull;
+	};
+
+	entity.calculateUpdates = function entityCalculateUpdates() {
+		
 	};
 
 	var fps = scope.constants.targetFps,

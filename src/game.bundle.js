@@ -20,7 +20,8 @@ function Entity(scope, coords, opts, sprites) {
 		direction: opts.startDirection || 'right',
 		isGrounded: true
 	};
-
+	
+	entity.updateQueue = {};
 	entity.baseAttributes = {
 		gravity: opts.gravity || 1,
 		groundSpeed: opts.groundSpeed || 1,
@@ -52,7 +53,11 @@ function Entity(scope, coords, opts, sprites) {
 		if (opts.hasOwnProperty('update')) {
 			opts.update.call(entity, scope);
 		}
+
 		entity.applyGravity();
+		this.state.position.x = this.state.position.x.boundary(0, (scope.constants.width - this.state.sprite.frameWidth));
+		this.state.position.y = this.state.position.y.boundary(0, (scope.constants.height - (this.state.sprite.height + 10)));
+		entity.calculateUpdates();
 		entity.state.sprite.update();
 	};
 
@@ -64,7 +69,17 @@ function Entity(scope, coords, opts, sprites) {
 	};
 
 	entity.applyGravity = function entityApplyGravity() {
-		entity.state.position.y += entity.attributes.gravity * entity.constants.gravityForce;
+		var gravitationalConstant = entity.constants.gravityForce,
+			entityMass = entity.attributes.gravity * 0.5,
+			floorMass = 400,
+			distance = entity.state.position.y - (scope.constants.height + 200),
+			gravitationalPull = gravitationalConstant * (entityMass * floorMass / Math.pow(distance, 2)) * 1500;
+		console.log('gravitational pull', gravitationalPull);
+		entity.state.position.y += gravitationalPull;
+	};
+
+	entity.calculateUpdates = function entityCalculateUpdates() {
+		
 	};
 
 	var fps = scope.constants.targetFps,
@@ -95,7 +110,7 @@ function Entity(scope, coords, opts, sprites) {
 }
 
 module.exports = Entity;
-},{"../utils/utils.extend.js":9,"../utils/utils.keysDown.js":10,"./game.sprites.js":4}],2:[function(require,module,exports){
+},{"../utils/utils.extend.js":10,"../utils/utils.keysDown.js":11,"./game.sprites.js":4}],2:[function(require,module,exports){
 /** Game Loop Module
  * This module contains the game loop, which handles
  * updating the game state and re-rendering the canvas
@@ -357,10 +372,11 @@ function Game(w, h, targetFps, showFps) {
 window.game = new Game(800, 600, 60, true);
 
 module.exports = game;
-},{"./core/game.loop.js":2,"./core/game.render.js":3,"./core/game.update.js":5,"./players/player.js":7,"./utils/utils.canvas.js":8}],7:[function(require,module,exports){
+},{"./core/game.loop.js":2,"./core/game.render.js":3,"./core/game.update.js":5,"./players/player.js":7,"./utils/utils.canvas.js":9}],7:[function(require,module,exports){
 var Entity = require('../core/game.entities.js'),
     keys = require('../utils/utils.keysDown.js'),
-    boundary = require('../utils/utils.math.js');
+    boundary = require('../utils/utils.math.js'),
+    playerSprites = require('./player.sprites.js');
 
 /**
  * Player module
@@ -368,13 +384,14 @@ var Entity = require('../core/game.entities.js'),
  * @extends core#Entity
  */
 function Player(scope, x, y) {
+    console.log(playerSprites);
     var player = new Entity(scope, {
             x: x,
             y: y
         }, {
             gravity: 1,
             groundSpeed: 3.5,
-            airSpeed: 1.25,
+            airSpeed: 1,
             startDirection: 'right',
             update: function playerUpdate() {
                 this.handleInputs();
@@ -404,73 +421,14 @@ function Player(scope, x, y) {
                 if (keys.isPressed.up) {
                     this.updateSprite('jump', this.state.direction);
                     this.state.position.y -= 7 * 3;
+                    this.state.isGrounded = false;
                 }
 
                 if ((!keys.isPressed.left && !keys.isPressed.right && !keys.isPressed.down && !keys.isPressed.up)) {
                     this.updateSprite('idle', this.state.direction);
                 }
-
-                // Bind the player to the boundary
-                this.state.position.x = this.state.position.x.boundary(0, (scope.constants.width - this.state.sprite.frameWidth));
-                this.state.position.y = this.state.position.y.boundary(0, (scope.constants.height - (this.state.sprite.height + 10)));
-                // Not sure why the height is off by 10.....
             }
-        }, {
-            'idle': {
-                duration: 0.4,
-                framesCount: 2,
-                images: {
-                    left: '/assets/sprites/entities/mmx-idle-left.png',
-                    right: '/assets/sprites/entities/mmx-idle-right.png'
-                },
-                width: 256,
-                height: 140,
-                default: true
-            },
-            'run': {
-                duration: 0.1,
-                framesCount: 6,
-                images: {
-                    left: '/assets/sprites/entities/mmx-run-left.png',
-                    right: '/assets/sprites/entities/mmx-run-right.png'
-                },
-                width: 852,
-                height: 142
-            },
-            'crouch': {
-                duration: 0.1,
-                framesCount: 2,
-                images: {
-                    left: '/assets/sprites/entities/mmx-crouch-left.png',
-                    right: '/assets/sprites/entities/mmx-crouch-right.png'
-                },
-                loop: false,
-                width: 256,
-                height: 140
-            },
-            'jump': {
-                duration: 0.1,
-                framesCount: 1,
-                images: {
-                    left: '/assets/sprites/entities/mmx-jump-left.png',
-                    right: '/assets/sprites/entities/mmx-jump-right.png'
-                },
-                loop: false,
-                width: 74,
-                height: 184
-            },
-            'fall': {
-                duration: 0.1,
-                framesCount: 1,
-                images: {
-                    left: '/assets/sprites/entities/mmx-fall-left.png',
-                    right: '/assets/sprites/entities/mmx-fall-right.png'
-                },
-                loop: false,
-                width: 108,
-                height: 168
-            }
-        });
+        }, playerSprites);
     
     player.handleInputs = function playerHandleInputs() {
         
@@ -480,7 +438,64 @@ function Player(scope, x, y) {
 }
 
 module.exports = Player;
-},{"../core/game.entities.js":1,"../utils/utils.keysDown.js":10,"../utils/utils.math.js":11}],8:[function(require,module,exports){
+},{"../core/game.entities.js":1,"../utils/utils.keysDown.js":11,"../utils/utils.math.js":12,"./player.sprites.js":8}],8:[function(require,module,exports){
+module.exports = {
+    'idle': {
+        duration: 0.4,
+        framesCount: 2,
+        images: {
+            left: '/assets/sprites/entities/mmx-idle-left.png',
+            right: '/assets/sprites/entities/mmx-idle-right.png'
+        },
+        width: 256,
+        height: 140,
+        default: true
+    },
+    'run': {
+        duration: 0.1,
+        framesCount: 6,
+        images: {
+            left: '/assets/sprites/entities/mmx-run-left.png',
+            right: '/assets/sprites/entities/mmx-run-right.png'
+        },
+        width: 852,
+        height: 142
+    },
+    'crouch': {
+        duration: 0.1,
+        framesCount: 2,
+        images: {
+            left: '/assets/sprites/entities/mmx-crouch-left.png',
+            right: '/assets/sprites/entities/mmx-crouch-right.png'
+        },
+        loop: false,
+        width: 256,
+        height: 140
+    },
+    'jump': {
+        duration: 0.1,
+        framesCount: 1,
+        images: {
+            left: '/assets/sprites/entities/mmx-jump-left.png',
+            right: '/assets/sprites/entities/mmx-jump-right.png'
+        },
+        loop: false,
+        width: 74,
+        height: 184
+    },
+    'fall': {
+        duration: 0.1,
+        framesCount: 1,
+        images: {
+            left: '/assets/sprites/entities/mmx-fall-left.png',
+            right: '/assets/sprites/entities/mmx-fall-right.png'
+        },
+        loop: false,
+        width: 108,
+        height: 168
+    }
+};
+},{}],9:[function(require,module,exports){
 module.exports = {
     /** Determine the proper pixel ratio for the canvas */
     getPixelRatio : function getPixelRatio(context) {
@@ -526,7 +541,7 @@ module.exports = {
       return canvas;
     }
 };
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 /**
  * Native JS extend utility
  * via @ChrisFerdinandi
@@ -551,7 +566,7 @@ function utilsExtendObj() {
 }
 
 module.exports = utilsExtendObj;
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 /** keysDown Utility Module
  * Monitors and determines whether a key 
  * is pressed down at any given moment.
@@ -610,7 +625,7 @@ function keysDown() {
 }
 
 module.exports = keysDown();
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /** 
  * Number.prototype.boundary
  * Binds a number between a minimum and a maximum amount.
